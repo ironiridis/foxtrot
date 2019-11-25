@@ -67,6 +67,17 @@ func (j *Joins) send(tx signalTransition) {
 	j.mu.RUnlock()
 }
 
+func NewJoins() *Joins {
+	j := new(Joins)
+	j.din = make(map[Join]Digital)
+	j.ain = make(map[Join]Analog)
+	j.sin = make(map[Join]Serial)
+	j.dout = make(map[Join]Digital)
+	j.aout = make(map[Join]Analog)
+	j.sout = make(map[Join]Serial)
+	return j
+}
+
 func (j *Joins) DigitalIn(i Join, v Digital) {
 	j.mu.Lock()
 	if v {
