@@ -2,6 +2,7 @@ package cip
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 )
 
@@ -22,6 +23,8 @@ func (c *Conn) readUpdateTask(r io.Reader) error {
 	}
 	if b[0] != 0x00 {
 		println("unexpected update task b[0]: ", b[0])
+		println("task: ", fmt.Sprintf("%x", b))
+
 	}
 	p := make([]byte, int(b[1])<<8|int(b[2]))
 	n, err = r.Read(p)
@@ -35,6 +38,7 @@ func (c *Conn) readUpdateTask(r io.Reader) error {
 	case 0x03: // sync
 		if len(p) != 2 {
 			println("unexpected update task sync payload length: ", len(p))
+			println("payload: ", fmt.Sprintf("%x", p))
 		}
 		switch p[1] {
 		case 0x00: // sync request

@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+const ErrorMalformedPacket Error = "malformed packet"
+
 func (c *Conn) tx(b []byte) error {
 	if c.lastError != nil {
 		return c.lastError
@@ -56,7 +58,8 @@ func (c *Conn) handlePong(p []byte) error {
 // client device requesting to come online
 func (c *Conn) sendOnlineRequest() error {
 	//TODO: determine purpose of mystery fields
-	err := c.txPkt(packetTypeOnlineReq, []byte{0x7f, 0x00, 0x00, 0x01, 0x00, byte(c.ipid), 0x40})
+	// first 5 bytes are some kind of device type, last byte (0x40) is unknown
+	err := c.txPkt(packetTypeOnlineReq, []byte{0x00, 0x00, 0x00, 0x00, 0x00, byte(c.ipid), 0x40})
 	if err == nil {
 		c.state = connStateAwaitingHello
 	}
@@ -66,23 +69,13 @@ func (c *Conn) sendOnlineRequest() error {
 func (c *Conn) handleOnlineRequest(p []byte) error {
 	var err error
 
-	if len(p) != 7 {
-		println("unexpected online request payload length: ", len(p))
-	}
-	if !bytes.Equal(p[:5], []byte{0x7f, 0x00, 0x00, 0x01, 0x00}) {
-		println("unexpected online request payload leadin: ", p[:5])
-	}
-	if p[6] != 0x40 {
-		println("unexpected online request payload final byte: ", p[6:])
+	if len(p) < 6 {
+		return c.err(ErrorMalformedPacket)
 	}
 	c.mu.Lock()
 	c.ipid = IPID(p[5])
 	c.mu.Unlock()
 
-	err = c.sendHello()
-	if err != nil {
-		return c.err(err)
-	}
 	err = c.sendOnlineOK()
 	if err != nil {
 		return c.err(err)

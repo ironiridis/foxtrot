@@ -2,6 +2,7 @@ package cip
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"strings"
 	"sync"
@@ -34,6 +35,7 @@ const (
 	connStateAwaitingOnlineOK
 	connStateAwaitingSync
 	connStateReady
+	connStateClosed
 )
 
 type packetType byte
@@ -69,6 +71,17 @@ func (c *Conn) err(e error) error {
 	return e
 }
 
+func (c *Conn) stop() error {
+	c.mu.Lock()
+	c.state = connStateClosed
+	if c.socket != nil {
+		c.socket.Close()
+		c.socket = nil
+	}
+	c.mu.Unlock()
+	return nil
+}
+
 func (c *Conn) setState(s connState) {
 	c.mu.Lock()
 	c.state = s
@@ -85,6 +98,9 @@ func (c *Conn) readLoop() error {
 	for {
 		b := make([]byte, 3)
 		n, err = s.Read(b)
+		if err == io.EOF {
+			return c.stop()
+		}
 		if err != nil {
 			return c.err(err)
 		}
@@ -142,6 +158,8 @@ func (c *Conn) String() string {
 		sb.WriteString("awaiting sync")
 	case connStateReady:
 		sb.WriteString("ready")
+	case connStateClosed:
+		sb.WriteString("closed")
 	default:
 		sb.WriteString(fmt.Sprintf("unknown state (%d)", c.state))
 	}
