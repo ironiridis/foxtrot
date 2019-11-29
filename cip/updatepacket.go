@@ -82,7 +82,7 @@ func (c *Conn) readUpdateTask(r io.Reader) error {
 }
 
 func (c *Conn) unpackUpdates(p []byte) error {
-	buf := bytes.NewBuffer(p)
+	buf := bytes.NewReader(p)
 	for buf.Len() > 0 {
 		err := c.readUpdateTask(buf)
 		if err != nil {
